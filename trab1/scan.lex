@@ -10,7 +10,7 @@ FLOAT	{INT}("."{INT})?([Ee]("+"|"-")?{INT})?
 FOR     [Ff][Oo][Rr]
 IF      [Ii][Ff]
 ID      ({LETRA}|"$"|"_")({LETRA}|{DIGITO}|"$"|"_")*
-STRING  (\"(\\.|[^"\\])*\")
+STRING  (\"(\"\"|\\.|[^"\\])*\")
 
 %%
     /* Padrões e ações. Nesta seção, comentários devem ter um tab antes */
