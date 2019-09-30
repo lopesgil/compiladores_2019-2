@@ -17,6 +17,8 @@ void E();
 void E_linha();
 void T();
 void T_linha();
+void V();
+void I();
 void F();
 void casa ( int );
 
@@ -131,11 +133,33 @@ void T_linha() {
 	}
 }
 
+void V(){
+	E();
+	if( token == ',' ) {
+		casa(',');
+		V();
+	}
+}
+
+void I() {
+	string temp(yytext);
+	casa(tk_id);
+	switch( token ) {
+		case '(':
+			casa('(');
+			V();
+			casa(')');
+			cout << temp << " # ";
+			break;
+		default:
+			cout << temp << " @ ";
+	}
+}
+
 void F() {
 	switch( token ) {
 		case tk_id : {
-			string temp(yytext);
-			casa( tk_id ); cout << temp << " @ ";
+			I();
 			}
 			break;
 		case tk_num : {
