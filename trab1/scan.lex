@@ -15,11 +15,11 @@ STRING  (\"(\"\"|\\.|[^"\\])*\")
 %%
     /* Padrões e ações. Nesta seção, comentários devem ter um tab antes */
 
-{WS}	 { /* ignora espaços, tabs e '\n' */ } 
+{WS}	 { /* ignora espaços, tabs e '\n' */ }
 {COMMEN} { return _COMENTARIO; }
 {INT}    { return _INT; }
 {FLOAT}  { return _FLOAT; }
-{STRING} { return _STRING; }  
+{STRING} { return _STRING; }
 {FOR}    { return _FOR; }
 {IF}     { return _IF; }
 ">="     { return _MAIG; }
@@ -27,7 +27,7 @@ STRING  (\"(\"\"|\\.|[^"\\])*\")
 "<="     { return _MEIG; }
 "=="     { return _IG; }
 "!="     { return _DIF; }
-.        { return *yytext; 
+.        { return *yytext;
           /* Essa deve ser a última regra. Dessa forma qualquer caractere isolado será retornado pelo seu código ascii. */ }
 
 %%
