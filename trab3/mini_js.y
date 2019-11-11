@@ -2,14 +2,21 @@
 #include <iostream>
 #include <string>
 #include <map>
+#include <vector>
 
 using namespace std;
 
 struct Atributos {
+    vector<string> c;
     string v;
 };
 
 #define YYSTYPE Atributos
+
+vector<string> concatena(vector<string> a, vector<string> b);
+vector<string> concatena(vector<string> a, string b);
+vector<string> operator+(vector<string> a, vector<string> b);
+vector<string> operator+(vector<string> a, string b);
 
 void erro(string msg);
 void Print(string st);
@@ -24,11 +31,13 @@ map<string, int> variaveis;
 
 void registra_variavel(string id, int linha);
 void checa_variavel(string id);
+string gera_label(string prefixo);
 
 %}
 
-%token ID NUM STR LET NARRAY NOBJ
+%token ID IF NUM STR LET NARRAY NOBJ
 %right '='
+%nonassoc '<' '>'
 %left '+' '-'
 %left '*' '/' '%'
 
@@ -64,6 +73,8 @@ ATR : L { checa_variavel($1.v); Print(""); } '=' E { Print("="); }
 E : L { checa_variavel($1.v); Print(""); } '=' ATR { Print("= ^"); }
   | E '+' E { Print("+"); }
   | E '*' E { Print("*"); }
+  | E '>' E { Print(">"); }
+  | E '<' E { Print("<"); }
   | F
   ;
 
@@ -100,9 +111,29 @@ F : L { checa_variavel($1.v); Print("@"); }
 
 
 int retorna (int tk) {
-  yylval.v = yytext;
-  coluna += strlen(yytext);
-  return tk;
+    yylval.c.push_back(yytext);
+    yylval.v = yytext;
+    coluna += strlen(yytext);
+    return tk;
+}
+
+vector<string> concatena(vector<string> a, vector<string> b) {
+    for(long unsigned int i = 0; i < b.size(); i++ )
+        a.push_back(b[i]);
+    return a;
+}
+
+vector<string> concatena(vector<string> a, string b) {
+    a.push_back(b);
+    return a;
+}
+
+vector<string> operator+(vector<string> a, vector<string> b) {
+    return concatena(a, b);
+}
+
+vector<string> operator+(vector<string> a, string b) {
+    return concatena(a, b);
 }
 
 void registra_variavel(string st, int lin) {
@@ -117,6 +148,11 @@ void checa_variavel(string st) {
     if (variaveis.find(st) == variaveis.end()) {
         erro("a variável '" + st + "' não foi declarada.");
     }
+}
+
+string gera_label(string prefixo) {
+    static int n = 0;
+    return prefixo + "_" + to_string(++n) + ":";
 }
 
 void erro(string msg) {
