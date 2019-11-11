@@ -1,0 +1,7 @@
+### Outputs
+*.c
+*.cc
+*.out
+
+# Entradas de teste
+*.txt
