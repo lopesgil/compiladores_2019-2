@@ -18,6 +18,8 @@ STRING  (\"([^\"\n]|(\\\")|\"\")+\")|(\'([^\'\n]|(\\\')|\'\')+\')
 {STRING}    { return retorna(STR); }
 "let"       { return retorna(LET); }
 "if"        { return retorna(IF); }
+"while"     { return retorna(WHILE); }
+"for"       { return retorna(FOR); }
 "{}"        { return retorna(NOBJ); }
 "[]"        { return retorna(NARRAY); }
 {ID}        { return retorna(ID); }
