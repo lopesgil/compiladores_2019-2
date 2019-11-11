@@ -20,6 +20,7 @@ vector<string> operator+(vector<string> a, string b);
 
 void erro(string msg);
 void Print(string st);
+void print_codigo(vector<string> codigo);
 
 int yylex();
 void yyerror(const char*);
@@ -43,49 +44,52 @@ string gera_label(string prefixo);
 
 %%
 
-S : CMDS { Print("."); }
+S : CMDS { print_codigo($1.c + " . "); }
   ;
 
-CMDS : CMD ';' CMDS
-     | CMD ';'
+CMDS : CMD ';' CMDS { $$.c = $1.c + "\n" + $3.c; }
+     | CMD ';' { $$.c = $1.c + "\n"; }
      ;
 
-CMD : DECL
-    | E
+CMD : DECL {$$.c = $1.c;}
+    | E {$$.c = $1.c;}
     ;
 
-DECL : LET DECLS
+DECL : LET DECLS { $$ = $2; }
      ;
 
-DECLS : L { Print("&"); registra_variavel($1.v, linha); } ',' DECLS
-      | ATRL ',' DECLS
-      | L { Print("&"); registra_variavel($1.v, linha); }
-      | ATRL
+DECLS : L ',' DECLS { $$.c = $1.c + "& " + $3.c; registra_variavel($1.v, linha); }
+      | ATRL ',' DECLS {$$.c = $1.c + $3.c;}
+      | L { $$.c = $1.c + "&"; registra_variavel($1.v, linha); }
+      | ATRL {$$.c = $1.c;}
       ;
 
-ATRL : L '=' { Print("& " + $1.v); registra_variavel($1.v, linha); } E { Print("= ^"); }
+ATRL : L '=' E {
+    registra_variavel($1.v, linha);
+    $$.c = $1.c + "& " + $1.c + " " + $3.c + " " + $2.v + " ^ ";
+}
      ;
 
-ATR : L { checa_variavel($1.v); Print(""); } '=' E { Print("="); }
-    | E
+ATR : L  '=' E { checa_variavel($1.v); $$.c = $1.c + " " + $3.c + " " + $2.v + " "; }
+    | E {$$.c = $1.c;}
     ;
 
-E : L { checa_variavel($1.v); Print(""); } '=' ATR { Print("= ^"); }
-  | E '+' E { Print("+"); }
-  | E '*' E { Print("*"); }
-  | E '>' E { Print(">"); }
-  | E '<' E { Print("<"); }
+E : L '=' ATR { checa_variavel($1.v); $$.c = $1.c + " " + $3.c + " " + $2.v + " ^ "; }
+  | E '+' E { $$.c = $1.c + " " + $3.c + " " + $2.v; }
+  | E '*' E { $$.c = $1.c + " " + $3.c + " " + $2.v; }
+  | E '>' E { $$.c = $1.c + " " + $3.c + " " + $2.v; }
+  | E '<' E { $$.c = $1.c + " " + $3.c + " " + $2.v; }
   | F
   ;
 
-L : ID { $$ = $1; cout << $1.v; }
+L : ID {$$.c = $$.c + $1.v; $$.v = $1.v;}
   ;
 
-F : L { checa_variavel($1.v); Print("@"); }
-  | NUM { Print($1.v); }
-  | STR { Print($1.v); }
-  | NARRAY { Print($1.v); }
-  | NOBJ { Print($1.v); }
+F : L { checa_variavel($1.v); $$.c = $1.c; $$.c = $$.c + "@ "; }
+  | NUM {$$.c = $$.c + $1.v;}
+  | STR {$$.c = $$.c + $1.v;}
+  | NARRAY {$$.c = $$.c + $1.v;}
+  | NOBJ {$$.c = $$.c + $1.v;}
   ;
 
 %%
@@ -111,15 +115,21 @@ F : L { checa_variavel($1.v); Print("@"); }
 
 
 int retorna (int tk) {
-    yylval.c.push_back(yytext);
     yylval.v = yytext;
     coluna += strlen(yytext);
     return tk;
 }
 
+void print_codigo(vector<string> codigo) {
+    for(long unsigned int i = 0; i < codigo.size(); i++) {
+        cout << codigo[i];
+    }
+}
+
 vector<string> concatena(vector<string> a, vector<string> b) {
-    for(long unsigned int i = 0; i < b.size(); i++ )
+    for(long unsigned int i = 0; i < b.size(); i++ ) {
         a.push_back(b[i]);
+    }
     return a;
 }
 
