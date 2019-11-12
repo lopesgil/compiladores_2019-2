@@ -1,6 +1,7 @@
 ### Outputs
 *.c
-*.cc
+*.yy.*
+*.o
 *.out
 
 # Entradas de teste
