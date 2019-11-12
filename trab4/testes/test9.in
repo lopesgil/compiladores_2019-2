@@ -1,0 +1,7 @@
+function f( x ) {
+  let b = f;
+  f = x;
+  return b;
+}
+
+let g = f( {} );
