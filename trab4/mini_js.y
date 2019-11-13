@@ -18,6 +18,7 @@ vector<string> concatena(vector<string> a, vector<string> b);
 vector<string> concatena(vector<string> a, string b);
 vector<string> operator+(vector<string> a, vector<string> b);
 vector<string> operator+(vector<string> a, string b);
+vector<string> processa_neg(string numero);
 
 void erro(string msg);
 void Print(string st);
@@ -39,7 +40,7 @@ string gera_label(string prefixo);
 
 %}
 
-%token ID IF NUM STR LET NARRAY NOBJ
+%token ID IF FOR WHILE NUM NEGNUM STR LET NARRAY NOBJ
 %right '='
 %nonassoc '<' '>'
 %left '+' '-'
@@ -74,22 +75,27 @@ ATRL : L '=' E {
      }
      ;
 
-ATR : L  '=' E { checa_variavel($1.v); $$.c = $1.c + $3.c + $2.v ; }
+ATR : L '=' E { checa_variavel($1.v); $$.c = $1.c + $3.c + $2.v ; }
     | E {$$.c = $1.c;}
     ;
+
+ATRP : LPROP '=' E { checa_variavel($1.v); $$.c = $1.c + $3.c + "[=]"; }
+     | E {$$.c = $1.c;}
+     ;
 
 IFS : IF '(' E ')' CMD {
         string verdadeiro = gera_label("verdadeiro_then");
         string falso = gera_label("falso_then");
         string def_verdadeiro = ":" + verdadeiro;
         string def_falso = ":" + falso;
-        $$.c = $$.c + $3.c + verdadeiro + "?";
-        $$.c = $$.c + falso + "#" + def_verdadeiro;
-        $$.c = $$.c + $5.c + def_falso;
+        $$.c = $$.c + $3.c + verdadeiro + " ?" +
+        falso + " #" + def_verdadeiro +
+        $5.c + def_falso;
     }
     ;
 
 E : L '=' ATR { checa_variavel($1.v); $$.c = $1.c + $3.c + $2.v + "^"; }
+  | LPROP '=' ATRP { checa_variavel($1.v); $$.c = $1.c + $3.c + "[=]" + "^"; }
   | E '+' E { $$.c = $1.c + $3.c + $2.v; }
   | E '-' E { $$.c = $1.c + $3.c + $2.v; }
   | E '*' E { $$.c = $1.c + $3.c + $2.v; }
@@ -98,14 +104,22 @@ E : L '=' ATR { checa_variavel($1.v); $$.c = $1.c + $3.c + $2.v + "^"; }
   | F
   ;
 
-L : ID {$$.c.push_back($1.v); $$.v = $1.v;}
+L : ID {$$.c = $$.c + $1.v; $$.v = $1.v;}
   ;
 
+LPROP : L '[' E ']' {$$.c = $1.c + "@" + $3.c; $$.v = $1.v; }
+      | L '.' L {$$.c = $1.c + "@" + $3.c; $$.v = $1.v; }
+      | LPROP '.' L {$$.c = $1.c + "[@]" + $3.c; $$.v = $1.v; }
+      | LPROP '[' E ']' {$$.c = $1.c + "[@]" + $3.c; $$.v = $1.v; }
+      ;
+
 F : L { checa_variavel($1.v); $$.c = $1.c + "@"; }
-  | NUM {$$.c.push_back($1.v);}
-  | STR {$$.c.push_back($1.v);}
-  | NARRAY {$$.c.push_back($1.v);}
-  | NOBJ {$$.c.push_back($1.v);}
+  | LPROP { checa_variavel($1.v); $$.c = $1.c + "[@]"; }
+  | NUM {$$.c = $$.c + $1.v;}
+  | STR {$$.c = $$.c + $1.v;}
+  | NEGNUM {$$.c = processa_neg($1.v);}
+  | NARRAY {$$.c = $$.c + $1.v;}
+  | NOBJ {$$.c = $$.c + $1.v;}
   ;
 
 %%
@@ -170,7 +184,7 @@ void print_codigo(vector<string> codigo) {
 
 vector<string> concatena(vector<string> a, vector<string> b) {
     for(long unsigned int i = 0; i < b.size(); i++ ) {
-        a.push_back(b[i] + " ");
+        a.push_back(b[i]);
     }
     return a;
 }
@@ -186,6 +200,14 @@ vector<string> operator+(vector<string> a, vector<string> b) {
 
 vector<string> operator+(vector<string> a, string b) {
     return concatena(a, b);
+}
+
+vector<string> processa_neg(string numero) {
+    vector<string> saida;
+    saida.push_back("0 ");
+    saida.push_back(numero.substr(1) + " ");
+    saida.push_back("- ");
+    return saida;
 }
 
 void registra_variavel(string st, int lin) {

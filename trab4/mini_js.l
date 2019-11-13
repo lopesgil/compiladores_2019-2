@@ -4,7 +4,8 @@ DIGITO  [0-9]
 LETRA   [A-Za-z_]
 
 INT     {DIGITO}+
-FLOAT	  (-?){INT}("."{INT})?([Ee]("+"|"-")?{INT})?
+FLOAT	  {INT}("."{INT})?([Ee]("+"|"-")?{INT})?
+NFLOAT	(-){INT}("."{INT})?([Ee]("+"|"-")?{INT})?
 ID      ({LETRA}|"$"|"_")({LETRA}|{DIGITO}|"$"|"_")*
 STRING  (\"([^\"\n]|(\\\")|\"\")+\")|(\'([^\'\n]|(\\\')|\'\')+\')
 
@@ -14,6 +15,7 @@ STRING  (\"([^\"\n]|(\\\")|\"\")+\")|(\'([^\'\n]|(\\\')|\'\')+\')
 " "         { coluna++; }
 "\n"        { linha++; coluna = 1; }
 
+{NFLOAT}    { return retorna(NEGNUM); }
 {FLOAT}     { return retorna(NUM); }
 {STRING}    { return retorna(STR); }
 "let"       { return retorna(LET); }
