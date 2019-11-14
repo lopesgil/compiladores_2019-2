@@ -19,6 +19,8 @@ STRING  (\"([^\"\n]|(\\\")|\"\")+\")|(\'([^\'\n]|(\\\')|\'\')+\')
 {FLOAT}     { return retorna(NUM); }
 {STRING}    { return retorna(STR); }
 "let"       { return retorna(LET); }
+"function"  { return retorna(FUNC); }
+"return"    { return retorna(RET); }
 "if"        { return retorna(IF); }
 "while"     { return retorna(WHILE); }
 "for"       { return retorna(FOR); }

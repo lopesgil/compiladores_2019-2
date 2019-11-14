@@ -33,14 +33,17 @@ int retorna(int tk);
 int linha = 0;
 int coluna = 1;
 map<string, int> variaveis;
+vector<string> c_funcoes;
 
 void registra_variavel(string id, int linha);
 void checa_variavel(string id);
 string gera_label(string prefixo);
 
+int num_args;
+
 %}
 
-%token ID IF FOR WHILE NUM NEGNUM STR LET NARRAY NOBJ
+%token ID FUNC RET IF FOR WHILE NUM NEGNUM STR LET NARRAY NOBJ
 %right '='
 %nonassoc '<' '>'
 %left '+' '-'
@@ -48,17 +51,48 @@ string gera_label(string prefixo);
 
 %%
 
-S : CMDS { print_codigo(resolve_enderecos($1.c) + "."); }
+S : CMDS { print_codigo(resolve_enderecos($1.c + "." + c_funcoes)); }
   ;
 
 CMDS : CMD ';' CMDS { $$.c = $1.c + $3.c; }
      | CMD ';' { $$.c = $1.c; }
+     | BLS CMDS { $$.c = $1.c + $2.c; }
+     | BLS { $$.c = $1.c; }
      ;
+
+BLS : FUNS {$$.c = $1.c;}
+    ;
 
 CMD : DECL {$$.c = $1.c;}
     | E {$$.c = $1.c;}
     | IFS {$$.c = $1.c;}
+    | RETUR {$$.c = $1.c;}
     ;
+
+FUNS : FUNC L '(' {registra_variavel($2.v, linha); num_args = 0;} PARAMS ')' BLOCO {
+         string endereco = gera_label($2.v);
+         string def_endereco = ":" + endereco;
+         $$.c = $2.c + "&" + $2.c + "{}" + "=" + "'&funcao'" + endereco + " [=]" + "^";
+         c_funcoes = c_funcoes + def_endereco + $5.c + $7.c +
+         "undefined" + "@" + "'&retorno'" + "@" + "~";
+     }
+     ;
+
+PARAMS : PARAM
+       |
+       ;
+
+PARAM : PARAM ',' L { registra_variavel($3.v, linha); $$.c = $3.c + "&" + $3.c + "arguments" +
+       "@" + to_string(num_args++) + "[@]" + "=" + "^" + $1.c; }
+      | L { registra_variavel($1.v, linha); $$.c = $1.c + "&" + $1.c + "arguments" +
+       "@" + to_string(num_args++) + "[@]" + "=" + "^"; }
+      ;
+
+RETUR : RET E {$$.c = $2.c + "'&retorno'" + "@" + "~";}
+      ;
+
+BLOCO : '{' CMDS '}' {$$.c = $2.c;}
+      ;
 
 DECL : LET DECLS { $$ = $2; }
      ;
@@ -94,6 +128,21 @@ IFS : IF '(' E ')' CMD {
     }
     ;
 
+CALFUN : ID '(' {num_args = 0;} ARGS ')' {
+           string n = to_string(num_args);
+           $$.c = $$.c + $4.c + n + $1.v + "@" + "$";
+       }
+       | ID '(' ')' { $$.c = $$.c + "0" + $1.v + "@" + "$"; }
+       ;
+
+ARGS : ARG {$$.c = $1.c;}
+     |
+     ;
+
+ARG : E ',' ARG {num_args++; $$.c = $1.c + $3.c;}
+    | E {num_args++; $$.c = $1.c; }
+    ;
+
 E : L '=' ATR { checa_variavel($1.v); $$.c = $1.c + $3.c + $2.v + "^"; }
   | LPROP '=' ATRP { checa_variavel($1.v); $$.c = $1.c + $3.c + "[=]" + "^"; }
   | E '+' E { $$.c = $1.c + $3.c + $2.v; }
@@ -101,6 +150,7 @@ E : L '=' ATR { checa_variavel($1.v); $$.c = $1.c + $3.c + $2.v + "^"; }
   | E '*' E { $$.c = $1.c + $3.c + $2.v; }
   | E '>' E { $$.c = $1.c + $3.c + $2.v; }
   | E '<' E { $$.c = $1.c + $3.c + $2.v; }
+  | CALFUN
   | F
   ;
 
@@ -236,7 +286,7 @@ void erro(string msg) {
 
 void yyerror(const char* msg) {
   cerr << endl << "Erro: " << msg << endl
-       << "Perto de : '" << yylval.v << "'" << endl;
+       << "Perto de : '" << yylval.v << "' na posição " << linha << "; " << coluna << endl;
   exit(-1);
 }
 
