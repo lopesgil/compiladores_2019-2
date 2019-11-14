@@ -4,4 +4,5 @@ function f( x ) {
   return b;
 }
 
-let g = f( {} );
+let a;
+let g = f( a = [], {} );
