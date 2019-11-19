@@ -18,14 +18,17 @@ STRING  (\"([^\"\n]|(\\\")|\"\")+\")|(\'([^\'\n]|(\\\')|\'\')+\')
 {NFLOAT}    { return retorna(NEGNUM); }
 {FLOAT}     { return retorna(NUM); }
 {STRING}    { return retorna(STR); }
+"asm{".*"}" { return asm_cod(ASM); }
 "let"       { return retorna(LET); }
 "function"  { return retorna(FUNC); }
 "return"    { return retorna(RET); }
 "if"        { return retorna(IF); }
+"else"      { return retorna(ELSE); }
 "while"     { return retorna(WHILE); }
 "for"       { return retorna(FOR); }
 "{}"        { return retorna(NOBJ); }
 "[]"        { return retorna(NARRAY); }
+"=="        { return retorna(_IGUAL); }
 {ID}        { return retorna(ID); }
 .           { return retorna(*yytext); }
 

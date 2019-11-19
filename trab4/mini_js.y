@@ -29,6 +29,10 @@ vector<string> resolve_enderecos(vector<string> entrada);
 int yylex();
 void yyerror(const char*);
 int retorna(int tk);
+int asm_cod(int tk);
+
+string trim(string st, string dl);
+vector<string> tokeniza(string st);
 
 int linha = 0;
 int coluna = 1;
@@ -43,9 +47,9 @@ int num_args;
 
 %}
 
-%token ID FUNC RET IF FOR WHILE NUM NEGNUM STR LET NARRAY NOBJ
+%token ID ASM FUNC RET IF ELSE FOR WHILE NUM NEGNUM STR LET NARRAY NOBJ
 %right '='
-%nonassoc '<' '>'
+%nonassoc '<' '>' _IGUAL
 %left '+' '-'
 %left '*' '/' '%'
 
@@ -61,15 +65,16 @@ CMDS : CMD ';' CMDS { $$.c = $1.c + $3.c; }
      ;
 
 BLS : FUNS {$$.c = $1.c;}
+    | IFS {$$.c = $1.c;}
     ;
 
 CMD : DECL {$$.c = $1.c;}
     | E {$$.c = $1.c;}
-    | IFS {$$.c = $1.c;}
     | RETUR {$$.c = $1.c;}
+    | E ASM { $$.c = $1.c + $2.c; }
     ;
 
-FUNS : FUNC L '(' {registra_variavel($2.v, linha); num_args = 0;} PARAMS ')' BLOCO {
+FUNS : FUNC L '(' {/* registra_variavel($2.v, linha);*/ num_args = 0;} PARAMS ')' BLOCO {
          string endereco = gera_label($2.v);
          string def_endereco = ":" + endereco;
          $$.c = $2.c + "&" + $2.c + "{}" + "=" + "'&funcao'" + endereco + " [=]" + "^";
@@ -82,9 +87,9 @@ PARAMS : PARAM
        |
        ;
 
-PARAM : PARAM ',' L { registra_variavel($3.v, linha); $$.c = $3.c + "&" + $3.c + "arguments" +
+PARAM : PARAM ',' L { /* registra_variavel($3.v, linha);*/ $$.c = $3.c + "&" + $3.c + "arguments" +
        "@" + to_string(num_args++) + "[@]" + "=" + "^" + $1.c; }
-      | L { registra_variavel($1.v, linha); $$.c = $1.c + "&" + $1.c + "arguments" +
+      | L { /* registra_variavel($1.v, linha);*/ $$.c = $1.c + "&" + $1.c + "arguments" +
        "@" + to_string(num_args++) + "[@]" + "=" + "^"; }
       ;
 
@@ -97,36 +102,61 @@ BLOCO : '{' CMDS '}' {$$.c = $2.c;}
 DECL : LET DECLS { $$ = $2; }
      ;
 
-DECLS : L ',' DECLS { $$.c = $1.c + "&" + $3.c; registra_variavel($1.v, linha); }
+DECLS : L ',' DECLS { $$.c = $1.c + "&" + $3.c; /* registra_variavel($1.v, linha);*/ }
       | ATRL ',' DECLS {$$.c = $1.c + $3.c;}
-      | L { $$.c = $1.c + "&"; registra_variavel($1.v, linha); }
+      | L { $$.c = $1.c + "&"; /* registra_variavel($1.v, linha);*/ }
       | ATRL {$$.c = $1.c;}
       ;
 
 ATRL : L '=' E {
-         registra_variavel($1.v, linha);
+         /* registra_variavel($1.v, linha);*/
          $$.c = $1.c + "&" + $1.c + $3.c  + $2.v + "^";
      }
      ;
 
-ATR : L '=' E { checa_variavel($1.v); $$.c = $1.c + $3.c + $2.v ; }
+ATR : L '=' E { /* checa_variavel($1.v);*/ $$.c = $1.c + $3.c + $2.v ; }
     | E {$$.c = $1.c;}
     ;
 
-ATRP : LPROP '=' E { checa_variavel($1.v); $$.c = $1.c + $3.c + "[=]"; }
+ATRP : LPROP '=' E { /* checa_variavel($1.v);*/ $$.c = $1.c + $3.c + "[=]"; }
      | E {$$.c = $1.c;}
      ;
 
-IFS : IF '(' E ')' CMD {
-        string verdadeiro = gera_label("verdadeiro_then");
-        string falso = gera_label("falso_then");
-        string def_verdadeiro = ":" + verdadeiro;
-        string def_falso = ":" + falso;
-        $$.c = $$.c + $3.c + verdadeiro + " ?" +
-        falso + " #" + def_verdadeiro +
-        $5.c + def_falso;
-    }
+IFS : IFSIMPLES
+    | IFELSE
     ;
+
+IFSIMPLES : IF '(' E ')' CMD ';' {
+              string verdadeiro = gera_label("verdadeiro_then");
+              string falso = gera_label("falso_then");
+              string def_verdadeiro = ":" + verdadeiro;
+              string def_falso = ":" + falso;
+              $$.c = $$.c + $3.c + verdadeiro + " ?" +
+              falso + " #" + def_verdadeiro +
+              $5.c + def_falso;
+          }
+          | IF '(' E ')' BLOCO {
+              string verdadeiro = gera_label("verdadeiro_then");
+              string falso = gera_label("falso_then");
+              string def_verdadeiro = ":" + verdadeiro;
+              string def_falso = ":" + falso;
+              $$.c = $$.c + $3.c + verdadeiro + " ?" + falso +
+              " #" + def_verdadeiro + $5.c + def_falso;
+          }
+          ;
+
+IFELSE : IF '(' E ')' CMD ';' ELSE CMD ';' {
+           string fim_if = gera_label("fim_if_then");
+           string verdadeiro = gera_label("verdadeiro_then");
+           string def_fim_if = ":" + fim_if;
+           string def_verdadeiro = ":" + verdadeiro;
+           $$.c = $$.c + $3.c + verdadeiro + " ?" + $8.c + fim_if + " #" +
+                  def_verdadeiro + $5.c + def_fim_if;
+       }
+       | IF '(' E ')' BLOCO ELSE CMD ';'
+       | IF '(' E ')' CMD ';' ELSE BLOCO
+       | IF '(' E ')' BLOCO ELSE BLOCO
+       ;
 
 CALFUN : ID '(' {num_args = 0;} ARGS ')' {
            string n = to_string(num_args);
@@ -143,13 +173,16 @@ ARG : E ',' ARG {num_args++; $$.c = $1.c + $3.c;}
     | E {num_args++; $$.c = $1.c; }
     ;
 
-E : L '=' ATR { checa_variavel($1.v); $$.c = $1.c + $3.c + $2.v + "^"; }
-  | LPROP '=' ATRP { checa_variavel($1.v); $$.c = $1.c + $3.c + "[=]" + "^"; }
+E : L '=' ATR { /* checa_variavel($1.v);*/ $$.c = $1.c + $3.c + $2.v + "^"; }
+  | LPROP '=' ATRP { /* checa_variavel($1.v);*/ $$.c = $1.c + $3.c + "[=]" + "^"; }
   | E '+' E { $$.c = $1.c + $3.c + $2.v; }
   | E '-' E { $$.c = $1.c + $3.c + $2.v; }
   | E '*' E { $$.c = $1.c + $3.c + $2.v; }
+  | E '%' E { $$.c = $1.c + $3.c + $2.v; }
+  | E '/' E { $$.c = $1.c + $3.c + $2.v; }
   | E '>' E { $$.c = $1.c + $3.c + $2.v; }
   | E '<' E { $$.c = $1.c + $3.c + $2.v; }
+  | E _IGUAL E { $$.c = $1.c + $3.c + $2.v; }
   | CALFUN
   | F
   ;
@@ -163,8 +196,8 @@ LPROP : L '[' E ']' {$$.c = $1.c + "@" + $3.c; $$.v = $1.v; }
       | LPROP '[' E ']' {$$.c = $1.c + "[@]" + $3.c; $$.v = $1.v; }
       ;
 
-F : L { checa_variavel($1.v); $$.c = $1.c + "@"; }
-  | LPROP { checa_variavel($1.v); $$.c = $1.c + "[@]"; }
+F : L { /* checa_variavel($1.v);*/ $$.c = $1.c + "@"; }
+  | LPROP { /* checa_variavel($1.v);*/ $$.c = $1.c + "[@]"; }
   | NUM {$$.c = $$.c + $1.v;}
   | STR {$$.c = $$.c + $1.v;}
   | NEGNUM {$$.c = processa_neg($1.v);}
@@ -196,6 +229,36 @@ F : L { checa_variavel($1.v); $$.c = $1.c + "@"; }
 
 int retorna (int tk) {
     yylval.v = yytext;
+    coluna += strlen(yytext);
+    return tk;
+}
+
+string trim(string st, string dl) {
+    string ret;
+    ret.reserve(st.size());
+        for(size_t j = 0; j < st.length(); j++) {
+            if(st[j] != '{' && st[j] != '}') ret += st[j];
+        }
+    return ret;
+}
+
+vector<string> tokeniza(string st) {
+    vector<string> ret;
+    string temp = st.substr();
+    size_t pos = 0;
+    string token;
+    while((pos = temp.find(" ")) != string::npos) {
+        token = temp.substr(0, pos);
+        ret.push_back(token + " ");
+        temp.erase(0, pos + 1);
+    }
+    ret.push_back(temp + " ");
+    return ret;
+}
+
+int asm_cod (int tk) {
+    string lexema = trim(yytext + 3, "{}");
+    yylval.c = tokeniza(lexema);
     coluna += strlen(yytext);
     return tk;
 }
