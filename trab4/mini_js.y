@@ -71,7 +71,7 @@ BLS : FUNS {$$.c = $1.c;}
 CMD : DECL {$$.c = $1.c;}
     | E {$$.c = $1.c;}
     | RETUR {$$.c = $1.c;}
-    | E ASM { $$.c = $1.c + $2.c; }
+    | E ASM { $$.c = $1.c + $2.c + "^";}
     ;
 
 FUNS : FUNC L '(' {/* registra_variavel($2.v, linha);*/ num_args = 0;} PARAMS ')' BLOCO {
@@ -103,14 +103,14 @@ DECL : LET DECLS { $$ = $2; }
      ;
 
 DECLS : L ',' DECLS { $$.c = $1.c + "&" + $3.c; /* registra_variavel($1.v, linha);*/ }
-      | ATRL ',' DECLS {$$.c = $1.c + $3.c;}
+      | ATRL ',' DECLS {$$.c = $1.c + $3.c; }
       | L { $$.c = $1.c + "&"; /* registra_variavel($1.v, linha);*/ }
       | ATRL {$$.c = $1.c;}
       ;
 
 ATRL : L '=' E {
          /* registra_variavel($1.v, linha);*/
-         $$.c = $1.c + "&" + $1.c + $3.c  + $2.v + "^";
+         $$.c = $1.c + "&" + $1.c + $3.c  + $2.v + "^" ;
      }
      ;
 
@@ -160,9 +160,9 @@ IFELSE : IF '(' E ')' CMD ';' ELSE CMD ';' {
 
 CALFUN : ID '(' {num_args = 0;} ARGS ')' {
            string n = to_string(num_args);
-           $$.c = $$.c + $4.c + n + $1.v + "@" + "$";
+           $$.c.clear(); $$.c = $$.c + $4.c + n + $1.v + "@" + "$";
        }
-       | ID '(' ')' { $$.c = $$.c + "0" + $1.v + "@" + "$"; }
+       | ID '(' ')' { $$.c.clear(); $$.c = $$.c + "0" + $1.v + "@" + "$"; }
        ;
 
 ARGS : ARG {$$.c = $1.c;}
@@ -187,7 +187,7 @@ E : L '=' ATR { /* checa_variavel($1.v);*/ $$.c = $1.c + $3.c + $2.v + "^"; }
   | F
   ;
 
-L : ID {$$.c = $$.c + $1.v; $$.v = $1.v;}
+L : ID {$$.c.clear(); $$.c = $$.c + $1.v; $$.v = $1.v;}
   ;
 
 LPROP : L '[' E ']' {$$.c = $1.c + "@" + $3.c; $$.v = $1.v; }
@@ -198,11 +198,11 @@ LPROP : L '[' E ']' {$$.c = $1.c + "@" + $3.c; $$.v = $1.v; }
 
 F : L { /* checa_variavel($1.v);*/ $$.c = $1.c + "@"; }
   | LPROP { /* checa_variavel($1.v);*/ $$.c = $1.c + "[@]"; }
-  | NUM {$$.c = $$.c + $1.v;}
-  | STR {$$.c = $$.c + $1.v;}
-  | NEGNUM {$$.c = processa_neg($1.v);}
-  | NARRAY {$$.c = $$.c + $1.v;}
-  | NOBJ {$$.c = $$.c + $1.v;}
+| NUM {$$.c.clear();$$.c = $$.c + $1.v;}
+  | STR {$$.c.clear(); $$.c = $$.c + $1.v;}
+| NEGNUM {$$.c.clear();$$.c = processa_neg($1.v);}
+| NARRAY {$$.c.clear();$$.c = $$.c + $1.v;}
+| NOBJ {$$.c.clear();$$.c = $$.c + $1.v;}
   ;
 
 %%
